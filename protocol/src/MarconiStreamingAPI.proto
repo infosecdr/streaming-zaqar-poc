@@ -1,0 +1,120 @@
+package org.openstack.marconi.streaming;
+  
+// NOTE WELL: the protobuf keyword "optional" does not necessarily meant the field is truly optional in this version of the streaming API; it just means that it is conceivable that in some version of this API that the field might be optional (perhaps replaced by something else)
+
+// represents the status of the server in the same way as HTTP but with the reason phrase being optional
+message Status {
+    // status_code: same as status code in RFC 2616 (required)
+    optional uint32 status_code = 1;
+    // reason_phrase: reason for the status (optional)
+    optional string reason_phrase = 2;
+}
+
+////// protobuf messages for consume-direction setup
+
+// a consume-direction setup request
+message ConsumeSetupRequest {
+    // queue_name: the name of the queue to get messages from (required)
+    optional string queue_name = 1;
+    // echo_requested: same as echo in REST API (required)
+    optional bool echo_requested = 2;
+    // include_claimed: same as include_claimed in REST API (required)
+    optional bool include_claimed = 3;
+    // starting_marker: same as marker in REST API -- starting marker for consuming (required)
+    optional string starting_marker = 4;
+}
+
+////// protobuf messages for consume requests and responses
+
+// a consume response; used for flow control and for setting options for the retrieved messages that the server provides
+message ConsumeRequest {
+    /// setting options to server
+    // send_marker: if true, requests that the server provide a marker for a message, either for the most recently sent message or for the next one to be sent (if there is going to be another one sent soon) (optional, defaults to false)
+    optional bool send_marker = 1 [default=false];
+    /// flow control
+    // max_msgnum_to_send: update or re-affirm the highest numbered message that the client want sent to it (required)
+    optional int64 max_msgnum_to_send = 2;
+}
+
+// represents a claim (same as in Marconi REST API)
+message Claim {
+    // id: claim ID (required)
+    optional string id = 1;
+    // client id: claim client ID (required)
+    optional string client_id = 2;
+}
+
+// a message with the metadata that is available when sending the message from a queue to a client
+message MessageAndMetadata {
+    // marker: marker indicating the position of this message in the queue (optional; may be omitted if not requested)
+    optional string marker = 1;
+    // id: message ID of this message (required)
+    optional string id = 2;
+    // ttl: message TTL (required, if a payload is being provided)
+    optional uint32 ttl = 3;
+    // age: current age of message (required, if a payload is being provided)
+    optional uint32 age = 4;
+    // claim: associate claim (optional; if a payload is being provided then omission indicates there is no associated claim)
+    optional Claim claim = 5;
+    // payload: the message payload as raw bytes (required if a payload is being provided)
+    optional bytes payload = 6;
+}
+
+// a consume response, either conveying a list of messages with associate metadata or an error
+message ConsumeResponse {
+    // status: if there was an error encountered on the server side, conveys some details (optional; omission means there is no error to report)
+    optional Status status = 1;
+    // messages: one or more messages and associated metadata (optional)
+    repeated MessageAndMetadata messages = 2;
+    // either we should have a status or have at least one message in messages
+}
+
+////// protobuf messages for produce-direction setup
+
+// a produce-direction setup request
+message ProduceSetupRequest {
+    // queue_name: the name of the queue to add the messages to (required)
+    optional string queue_name = 1;
+}
+
+// a response to a produce-direction setup request
+message ProduceSetupResponse {
+    // queue_name: the name of the queue to add the messages to (required)
+    optional Status status = 1;
+    // max_msgnum_to_send: the initial highest numbered message that the server wants sent to it (required)
+    optional int64 max_msgnum_to_send = 3;
+}
+
+////// protobuf messages for produce requests and responses
+
+// a produce-direction request that passes along a number of messages to add
+message ProduceRequest {
+    // ttl: the TTL for all the messages in this ProduceRequest (required)
+    optional uint32 ttl = 1;
+    // payloads: one or more message payloads (raw bytes) to add
+    repeated bytes payloads = 2;
+}
+
+// a produce response; used for flow control and for giving the status of one or more produce requests
+message ProduceResponse {
+    // status: the produce status being conveyed (optional; default is that no status is being conveyed in this protobuf message)
+    optional Status status = 1;
+    // msgnum_status_is_thru: the above status is for this message number as well as any messages numbered prior to this but after the message number the previously reported status was for (required if status is present)
+    optional int64 msgnum_status_is_thru = 2;
+    // max_msgnum_to_send: update or re-affirm the highest numbered message that the server wants sent to it (required)
+    optional int64 max_msgnum_to_send = 3;
+}
+
+////// protobuf message for setup (always the first protobuf message on a WebSocket message)
+
+// a setup request from the consumer; could be either for a get operation or an append operation
+message SetupRequest {
+    /// consuming direction
+    // the get field is present if and only if a get request is being requested
+    optional ConsumeSetupRequest get = 1;
+    /// producing direction
+    // the get field is present if and only if a get request is being requested
+    optional ProduceSetupRequest append = 8;
+    // exactly one of the above fields should be present; instead of having an operation type enum, we can tell the operation type being requested by which field is present
+    // (as it turns out bits 2-5 of the first byte of the protobuf essentially act as an operation code)
+}
