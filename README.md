@@ -13,9 +13,9 @@ As a proof of concept (PoC), we did some research and developed a Websocket-base
 
 As a further PoC, we wrote some server-side and client-side producer and consumer code to fill the different ends of the protocol the API.  We also wrote a driver for using Kafka for message storage.
 
-We provided the Zaqar team with our streaming API and they expressed an interest in adding a streaming API based on Websocket.  Thus we 
+We provided the Zaqar team with our streaming API and they expressed an interest in adding a streaming API based on Websocket.  Thus we are sharing this protocol spec and code.
 
-Since this streaming API will soon be superceded by an official Zaqar streaming API, we are not doing further development of our own streaming API and instead will be supporting the official one.  Symantec plans to developing an open source Kafka driver for Zaqar.
+Since this streaming API will soon be superseded by an official Zaqar streaming API, we are not doing further development of our own streaming API and instead will be supporting the official one.  Symantec plans to developing an open source Kafka driver for Zaqar.
 
 ## Some notes
 
@@ -37,8 +37,10 @@ The subdirectories of this repro are:
 ## Building the code
 
 Do these in order:
-    protocol/src/recompile-protobuf.sh
-    (cd clients; mvn clean package)
+```shell
+protocol/src/recompile-protobuf.sh
+(cd clients; mvn clean package)
+```
 
 ## Running the PoC
 
